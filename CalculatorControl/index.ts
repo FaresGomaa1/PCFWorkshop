@@ -1,68 +1,89 @@
 import { IInputs, IOutputs } from "./generated/ManifestTypes";
 
 export class CalculatorControl implements ComponentFramework.StandardControl<IInputs, IOutputs> {
-    /**
-     * Empty constructor.
-     */
     private messageDiv: HTMLDivElement;
-    private textArea: HTMLTextAreaElement;
+    private input: HTMLInputElement;
     private myNotifyOutputChanged: () => void;
-    constructor() {
-        // Empty
-    }
+    private calculatedResult: string = "";
 
-    /**
-     * Used to initialize the control instance. Controls can kick off remote server calls and other initialization actions here.
-     * Data-set values are not initialized here, use updateView.
-     * @param context The entire property bag available to control via Context Object; It contains values as set up by the customizer mapped to property names defined in the manifest, as well as utility functions.
-     * @param notifyOutputChanged A callback method to alert the framework that the control has new outputs ready to be retrieved asynchronously.
-     * @param state A piece of data that persists in one session for a single user. Can be set at any point in a controls life cycle by calling 'setControlState' in the Mode interface.
-     * @param container If a control is marked control-type='standard', it will receive an empty div element within which it can render its content.
-     */
+    constructor() {}
+
     public init(
         context: ComponentFramework.Context<IInputs>,
         notifyOutputChanged: () => void,
         state: ComponentFramework.Dictionary,
         container: HTMLDivElement
     ): void {
-        // Add control initialization code
-        // Create a wrapper div
         this.myNotifyOutputChanged = notifyOutputChanged;
-        this.messageDiv= document.createElement('div');
 
-        // Create a textarea and safely set its value
-        this.textArea= document.createElement('textarea');
-        // Append textarea to div and div to container
-        this.messageDiv.appendChild(this.textArea);
+        this.messageDiv = document.createElement("div");
+        this.input = document.createElement("input");
+
+        this.input.addEventListener("blur", () => {
+            this.calculate();
+        });
+
+        this.messageDiv.appendChild(this.input);
         container.appendChild(this.messageDiv);
     }
 
-
-    /**
-     * Called when any value in the property bag has changed. This includes field values, data-sets, global values such as container height and width, offline status, control metadata values such as label, visible, etc.
-     * @param context The entire property bag available to control via Context Object; It contains values as set up by the customizer mapped to names defined in the manifest, as well as utility functions
-     */
     public updateView(context: ComponentFramework.Context<IInputs>): void {
-        // Add code to update control view
-        this.textArea.value = context.parameters.sampleProperty?.raw || "";
-        this.myNotifyOutputChanged();
+        this.input.value = context.parameters.sampleProperty.raw || "";
     }
 
-    /**
-     * It is called by the framework prior to a control receiving new data.
-     * @returns an object based on nomenclature defined in manifest, expecting object[s] for property marked as "bound" or "output"
-     */
+private calculate(): void {
+    const inputValue = this.input.value.trim();
+
+    // Check if it's just a single number
+    if (/^\d+$/.test(inputValue)) {
+        this.calculatedResult = inputValue;
+        this.myNotifyOutputChanged();
+        return;
+    }
+
+    // Check for a full expression: number operator number
+    const match = inputValue.match(/^(\d+)\s*([+\-*/])\s*(\d+)$/);
+    if (match) {
+        const firstDigit = Number(match[1]);
+        const operator = match[2];
+        const secondDigit = Number(match[3]);
+
+        let result: number;
+        switch (operator) {
+            case '+':
+                result = firstDigit + secondDigit;
+                break;
+            case '-':
+                result = firstDigit - secondDigit;
+                break;
+            case '*':
+                result = firstDigit * secondDigit;
+                break;
+            case '/':
+                result = secondDigit !== 0 ? firstDigit / secondDigit : NaN;
+                break;
+            default:
+                result = NaN;
+        }
+
+        this.calculatedResult = isNaN(result) ? "Wrong Inputs" : result.toString();
+        this.myNotifyOutputChanged();
+        return;
+    }
+
+    // If neither a number nor a valid expression
+    this.calculatedResult = "Wrong Inputs";
+    this.myNotifyOutputChanged();
+}
+
+
     public getOutputs(): IOutputs {
         return {
-            sampleProperty: this.textArea.value,
+            sampleProperty: this.calculatedResult
         };
     }
 
-    /**
-     * Called when the control is to be removed from the DOM tree. Controls should use this call for cleanup.
-     * i.e. cancelling any pending remote calls, removing listeners, etc.
-     */
     public destroy(): void {
-        // Add code to cleanup control if necessary
+        // Cleanup if needed
     }
 }
