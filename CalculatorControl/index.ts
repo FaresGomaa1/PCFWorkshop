@@ -4,9 +4,7 @@ export class CalculatorControl implements ComponentFramework.StandardControl<IIn
     private messageDiv: HTMLDivElement;
     private input: HTMLInputElement;
     private myNotifyOutputChanged: () => void;
-    private calculatedResult: string = "";
-
-    constructor() {}
+    private calculatedResult = ""; 
 
     public init(
         context: ComponentFramework.Context<IInputs>,
